@@ -1,30 +1,36 @@
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  version         = "20.8.4"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.31.6"
+
   cluster_name    = local.cluster_name
   cluster_version = var.kubernetes_version
-  subnet_ids      = module.vpc.private_subnets
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+
+  # Allows the IAM identity running Terraform to administer the cluster.
+  enable_cluster_creator_admin_permissions = true
+
+  # Keep the API endpoint reachable from your workstation for this learning POC.
+  # For production, restrict public access to trusted IP CIDR ranges.
+  cluster_endpoint_public_access = true
 
   enable_irsa = true
 
-  tags = {
-    cluster = "demo"
-  }
-
-  vpc_id = module.vpc.vpc_id
-
   eks_managed_node_group_defaults = {
-    ami_type               = "AL2_x86_64"
-    instance_types         = ["t3.medium"]
-    vpc_security_group_ids = [aws_security_group.all_worker_mgmt.id]
+    instance_types = var.node_instance_types
   }
 
   eks_managed_node_groups = {
-
-    node_group = {
-      min_size     = 2
-      max_size     = 6
-      desired_size = 2
+    poc_nodes = {
+      min_size     = var.min_size
+      max_size     = var.max_size
+      desired_size = var.desired_size
     }
+  }
+
+  tags = {
+    Project   = "terraform-eks-poc"
+    ManagedBy = "Terraform"
   }
 }
